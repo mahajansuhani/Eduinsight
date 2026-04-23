@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-setup.html">Update Data</a>
+            <a href="#" onclick="viewReport()">View Report</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Welcome Header -->
+        <div class="dashboard-header">
+            <h1 id="welcomeTitle">👋 Welcome back!</h1>
+            <p>Track your academic performance and get personalized insights</p>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-3 mb-30">
+            <div class="card text-center">
+                <div class="gpa-circle" id="gpaCircle">
+                    <div class="gpa-value" id="gpaValue">3.2</div>
+                </div>
+                <h3>Predicted GPA</h3>
+                <p class="text-muted">out of 4.0</p>
+                <div class="progress-bar mt-20">
+                    <div class="progress-fill" id="gpaProgress"></div>
+                </div>
+            </div>
+            
+            <div class="card text-center">
+                <div class="icon-xl" id="riskEmoji">🟢</div>
+                <h3>Risk Level</h3>
+                <h2 id="riskLevel" class="risk-low">LOW</h2>
+                <p>You're on track!</p>
+            </div>
+            
+            <div class="card text-center">
+                <div class="icon-xl">🏆</div>
+                <h3>Class Rank</h3>
+                <h2 id="rankValue">Top 35%</h2>
+                <p>of 6,607 students</p>
+            </div>
+        </div>
+        
+        <!-- Performance Chart & Recommendations -->
+        <div class="grid grid-2 mb-30">
+            <div class="card">
+                <h3 class="card-title">📈 Performance Overview</h3>
+                <canvas id="performanceChart" height="200"></canvas>
+            </div>
+            
+            <div class="card">
+                <h3 class="card-title">🎯 Smart Recommendations</h3>
+                <div id="recommendationsList">
+                    <div class="recommendation-item">
+                        <strong>📚 Increase Study Hours</strong>
+                        <p>Top performers study 5+ hours/day. You study 4.2 hours.</p>
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>✅ Improve Attendance</strong>
+                        <p>Your attendance is 85%. Aim for 90%+ to boost GPA.</p>
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>📝 Focus on Mathematics</strong>
+                        <p>Your math score (72%) is below your average.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Subject-wise Performance -->
+        <div class="card mb-30">
+            <h3 class="card-title">📚 Subject-wise Performance</h3>
+            <div class="grid grid-2">
+                <div>
+                    <div class="subject-card">
+                        <div class="subject-name">Mathematics</div>
+                        <div class="progress-bar"><div class="progress-fill progress-fill-warning" style="width: 72%;"></div></div>
+                        <span>72% - Needs Improvement</span>
+                    </div>
+                    <div class="subject-card">
+                        <div class="subject-name">Physics</div>
+                        <div class="progress-bar"><div class="progress-fill progress-fill-success" style="width: 85%;"></div></div>
+                        <span>85% - Good</span>
+                    </div>
+                    <div class="subject-card">
+                        <div class="subject-name">Chemistry</div>
+                        <div class="progress-bar"><div class="progress-fill progress-fill-warning" style="width: 78%;"></div></div>
+                        <span>78% - Average</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="subject-card">
+                        <div class="subject-name">English</div>
+                        <div class="progress-bar"><div class="progress-fill progress-fill-success" style="width: 88%;"></div></div>
+                        <span>88% - Good</span>
+                    </div>
+                    <div class="subject-card">
+                        <div class="subject-name">Computer Science</div>
+                        <div class="progress-bar"><div class="progress-fill progress-fill-success" style="width: 92%;"></div></div>
+                        <span>92% - Excellent</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Results -->
+        <div class="card">
+            <h3 class="card-title">📋 Recent Exam Results</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Exam</th><th>Subject</th><th>Marks</th><th>Grade</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Mid-Term</td><td>Mathematics</td><td>72/100</td><td class="risk-medium">B-</td></tr>
+                        <tr><td>Mid-Term</td><td>Physics</td><td>85/100</td><td class="risk-low">A-</td></tr>
+                        <tr><td>Quiz 3</td><td>Computer Science</td><td>92/100</td><td class="risk-low">A</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="grid grid-2 mt-30">
+            <button class="btn btn-primary" onclick="updateData()">📝 Update My Data</button>
+            <button class="btn btn-success" onclick="downloadReport()">📥 Download Report</button>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('student');
+
+        // Performance Chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Your GPA',
+                    data: [2.8, 2.9, 3.0, 3.1, 3.2, 3.3],
+                    borderColor: '#6C63FF',
+                    backgroundColor: 'rgba(108,99,255,0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        async function loadStudentProfile() {
+            try {
+                const currentUser = getCurrentUser();
+                const data = await apiGet('/students');
+                const student = (data.students || []).find((s) => s.email === currentUser.email);
+
+                if (!student) {
+                    return;
+                }
+
+                document.getElementById('welcomeTitle').textContent = `👋 Welcome back, ${student.name}!`;
+                document.getElementById('gpaValue').textContent = student.gpa;
+                document.getElementById('gpaProgress').style.width = `${Math.min(100, (Number(student.gpa) / 4) * 100)}%`;
+
+                const risk = (student.riskLevel || 'SAFE').toUpperCase();
+                const riskElement = document.getElementById('riskLevel');
+                riskElement.textContent = risk;
+                riskElement.className = riskClassFromLevel(risk);
+
+                const riskEmoji = document.getElementById('riskEmoji');
+                if (risk.includes('CRITICAL') || risk.includes('HIGH')) {
+                    riskEmoji.textContent = '🔴';
+                } else if (risk.includes('MEDIUM') || risk.includes('ATTENTION')) {
+                    riskEmoji.textContent = '🟠';
+                } else {
+                    riskEmoji.textContent = '🟢';
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        
+        function updateData() {
+            alert('Update your academic data here');
+        }
+        
+        function viewReport() {
+            alert('Generating detailed report...');
+        }
+        
+        function downloadReport() {
+            alert('Downloading PDF report...');
+        }
+
+        loadStudentProfile();
+    </script>
+</body>
+</html>

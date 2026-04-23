@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduInsight - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h2>🔐 Welcome Back</h2>
+                <div class="role-badge" id="roleBadge">Student Login</div>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>📧 Email or 👤 Name</label>
+                    <input type="text" class="form-control" id="email" required placeholder="Enter your email or name">
+                </div>
+                
+                <div class="form-group">
+                    <label>🔒 Password</label>
+                    <input type="password" class="form-control" id="password" required placeholder="Enter your password">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-100">Login →</button>
+            </form>
+            
+            <div class="register-link">
+                <a href="register.html">Don't have an account? Register here</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        // Get role from localStorage
+        const role = localStorage.getItem('userRole') || 'student';
+        document.getElementById('roleBadge').textContent = role === 'student' ? '👨‍🎓 Student Login' : '👩‍🏫 Teacher Login';
+        
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                alert('Please enter email and password');
+                return;
+            }
+
+            try {
+                const data = await apiPostForm('/login', {
+                    email,
+                    password,
+                    role
+                });
+
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('userEmail', data.user.email || email);
+                localStorage.setItem('userRole', data.user.role || role);
+                localStorage.setItem('userName', data.user.name || 'User');
+
+                if ((data.user.role || role) === 'student') {
+                    window.location.href = 'student-dashboard.html';
+                } else {
+                    window.location.href = 'teacher-dashboard.html';
+                }
+            } catch (error) {
+                alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+            }
+        });
+    </script>
+</body>
+</html>

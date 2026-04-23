@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="teacher-dashboard.html">Dashboard</a>
+            <a href="student-management.html">Manage Students</a>
+            <a href="csv-import.html">Import CSV</a>
+            <a href="attendance.html">Attendance</a>
+            <a href="exam-results.html">Exam Results</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <!-- Stats Cards -->
+        <div class="grid grid-4 mb-30">
+            <div class="stat-card">
+                <div class="fs-32">👨‍🎓</div>
+                <div class="stat-value" id="totalStudents">6,607</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="stat-card stat-card-green">
+                <div class="fs-32">📊</div>
+                <div class="stat-value" id="avgGPA">3.1</div>
+                <div class="stat-label">Average GPA</div>
+            </div>
+            <div class="stat-card stat-card-orange">
+                <div class="fs-32">⚠️</div>
+                <div class="stat-value" id="atRisk">1,245</div>
+                <div class="stat-label">At-Risk Students</div>
+            </div>
+            <div class="stat-card stat-card-purple">
+                <div class="fs-32">📈</div>
+                <div class="stat-value" id="passRate">78%</div>
+                <div class="stat-label">Pass Rate</div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="location.href='student-management.html'">➕ Add Student</button>
+            <button class="btn btn-success" onclick="location.href='csv-import.html'">📥 Import CSV</button>
+            <button class="btn btn-warning" onclick="exportData()">📎 Export Data</button>
+            <button class="btn btn-outline" onclick="refreshData()">🔄 Refresh</button>
+        </div>
+        
+        <!-- Search -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="🔍 Search students by name, email, or stream..." onkeyup="searchStudents()">
+        </div>
+        
+        <!-- Students Table -->
+        <div class="card mb-30">
+            <h3 class="card-title">👨‍🎓 Student Records</h3>
+            <div class="table-container">
+                <table id="studentTable">
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Stream</th><th>Attendance</th><th>Study Hours</th><th>GPA</th><th>Risk Level</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- Data loaded via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="grid grid-2">
+            <div class="card">
+                <h3 class="card-title">📊 GPA Distribution</h3>
+                <canvas id="gpaChart" height="200"></canvas>
+            </div>
+            <div class="card">
+                <h3 class="card-title">⚠️ At-Risk Students by Stream</h3>
+                <canvas id="riskChart" height="200"></canvas>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="card mt-30">
+            <h3 class="card-title">🔄 Recent Activity</h3>
+            <ul class="list-none">
+                <li class="recent-activity-item">✅ 45 students' attendance updated - Today</li>
+                <li class="recent-activity-item">📝 Exam results for Mid-Term published - Yesterday</li>
+                <li class="recent-activity-item">⚠️ 8 new at-risk students identified - 2 days ago</li>
+                <li class="recent-activity-item">📥 CSV import: 150 students added - 3 days ago</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('teacher');
+        let students = [];
+
+        async function fetchStudents() {
+            try {
+                const data = await apiGet('/students');
+
+                students = data.students || [];
+                updateSummaryStats();
+                loadStudentTable();
+            } catch (error) {
+                alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+            }
+        }
+
+        function updateSummaryStats() {
+            const total = students.length;
+            const avgGpa = total
+                ? (students.reduce((sum, s) => sum + (Number(s.gpa) || 0), 0) / total).toFixed(2)
+                : '0.00';
+            const atRisk = students.filter(s => riskClassFromLevel(s.riskLevel) !== 'risk-low').length;
+            const passRate = total ? Math.round((students.filter(s => (Number(s.gpa) || 0) >= 2.0).length / total) * 100) : 0;
+
+            document.getElementById('totalStudents').textContent = total;
+            document.getElementById('avgGPA').textContent = avgGpa;
+            document.getElementById('atRisk').textContent = atRisk;
+            document.getElementById('passRate').textContent = `${passRate}%`;
+        }
+
+        function loadStudentTable() {
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = tbody.insertRow();
+                const riskClass = riskClassFromLevel(student.riskLevel);
+                
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.stream}</td>
+                    <td>${student.attendance}%</td>
+                    <td>${student.studyHours}h</td>
+                    <td>${student.gpa}</td>
+                    <td class="${riskClass}">${student.riskLevel || 'SAFE'}</td>
+                    <td>
+                        <button class="btn btn-outline btn-compact mr-5" onclick="editStudent(${student.id})">✏️</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteStudent(${student.id})">🗑️</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function searchStudents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = students.filter(s => 
+                s.name.toLowerCase().includes(searchTerm) || 
+                s.stream.toLowerCase().includes(searchTerm)
+            );
+            
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            
+            filtered.forEach(student => {
+                const row = tbody.insertRow();
+                const riskClass = riskClassFromLevel(student.riskLevel);
+                
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.stream}</td>
+                    <td>${student.attendance}%</td>
+                    <td>${student.studyHours}h</td>
+                    <td>${student.gpa}</td>
+                    <td class="${riskClass}">${student.riskLevel || 'SAFE'}</td>
+                    <td>
+                        <button class="btn btn-outline btn-compact" onclick="editStudent(${student.id})">✏️</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteStudent(${student.id})">🗑️</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function editStudent(id) {
+            alert(`Edit student with ID: ${id}`);
+        }
+        
+        async function deleteStudent(id) {
+            if (!confirm('Are you sure you want to delete this student?')) {
+                return;
+            }
+
+            try {
+                await apiDelete(`/students?id=${id}`);
+                await fetchStudents();
+            } catch (error) {
+                alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+            }
+        }
+        
+        function exportData() {
+            alert('Exporting student data to CSV...');
+        }
+        
+        function refreshData() {
+            location.reload();
+        }
+        
+        // GPA Distribution Chart
+        const gpaCtx = document.getElementById('gpaChart').getContext('2d');
+        new Chart(gpaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-1.5', '1.5-2.0', '2.0-2.5', '2.5-3.0', '3.0-3.5', '3.5-4.0'],
+                datasets: [{
+                    label: 'Number of Students',
+                    data: [45, 120, 340, 890, 2100, 3112],
+                    backgroundColor: '#6C63FF',
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+        
+        // Risk Distribution Chart
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Science', 'Commerce', 'Arts'],
+                datasets: [{
+                    data: [45, 30, 25],
+                    backgroundColor: ['#FF4C4C', '#FF9800', '#FFD700'],
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+        
+        // Load initial data
+        fetchStudents();
+    </script>
+</body>
+</html>

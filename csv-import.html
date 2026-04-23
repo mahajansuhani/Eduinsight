@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Import - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="teacher-dashboard.html">Dashboard</a>
+            <a href="student-management.html">Manage Students</a>
+            <a href="csv-import.html">Import CSV</a>
+            <a href="attendance.html">Attendance</a>
+            <a href="exam-results.html">Exam Results</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>📥 Import Students from CSV</h2>
+            <p>Upload a CSV file with student data. <a class="sample-link" onclick="downloadTemplate()">Download sample template</a></p>
+            
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('csvFile').click()">
+                <div class="icon-upload">📁</div>
+                <h3>Click or drag CSV file here</h3>
+                <p>Supported format: .csv</p>
+                <input type="file" id="csvFile" class="hidden-input" accept=".csv" onchange="handleFile(this.files[0])">
+            </div>
+            
+            <div id="previewSection" class="hidden-section">
+                <h3>Preview Data</h3>
+                <div class="preview-table">
+                    <div class="table-container">
+                        <table id="previewTable">
+                            <thead id="previewHeader"></thead>
+                            <tbody id="previewBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="flex-row-10-mt20">
+                    <button class="btn btn-primary" onclick="importData()">✅ Import Data</button>
+                    <button class="btn btn-outline" onclick="clearPreview()">❌ Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('teacher');
+        let csvData = [];
+        let headers = [];
+        
+        function downloadTemplate() {
+            const template = "Name,Email,Stream,Attendance,Study Hours,Assignment Score\nJohn Doe,john@example.com,Science,85,4.5,78\nJane Smith,jane@example.com,Commerce,92,5.0,88";
+            const blob = new Blob([template], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'student_template.csv';
+            link.click();
+        }
+        
+        function handleFile(file) {
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseCSV(content);
+            };
+            reader.readAsText(file);
+        }
+        
+        function parseCSV(content) {
+            const lines = content.split('\n');
+            headers = lines[0].split(',').map(h => h.trim());
+            csvData = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim()) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    if (values.length === headers.length) {
+                        const row = {};
+                        headers.forEach((h, idx) => row[h] = values[idx]);
+                        csvData.push(row);
+                    }
+                }
+            }
+            
+            showPreview();
+        }
+        
+        function showPreview() {
+            document.getElementById('previewSection').style.display = 'block';
+            
+            // Show header
+            const thead = document.getElementById('previewHeader');
+            thead.innerHTML = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+            
+            // Show first 10 rows
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = '';
+            const previewRows = csvData.slice(0, 10);
+            
+            previewRows.forEach(row => {
+                const tr = document.createElement('tr');
+                headers.forEach(h => {
+                    const td = document.createElement('td');
+                    td.textContent = row[h] || '';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            
+            if (csvData.length > 10) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = headers.length;
+                td.textContent = `... and ${csvData.length - 10} more rows`;
+                td.style.textAlign = 'center';
+                td.style.fontStyle = 'italic';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+            }
+        }
+        
+        async function importData() {
+            if (csvData.length === 0) {
+                alert('No data to import');
+                return;
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const row of csvData) {
+                try {
+                    await apiPostForm('/register', {
+                        name: row['Name'] || '',
+                        email: row['Email'] || '',
+                        password: 'temp123',
+                        role: 'student',
+                        stream: row['Stream'] || 'Science',
+                        subject: '',
+                        gender: '',
+                        age: '0',
+                        phone: '',
+                        attendance: row['Attendance'] || '0',
+                        studyHours: row['Study Hours'] || '0',
+                        assignmentScore: row['Assignment Score'] || '0'
+                    });
+                    successCount++;
+                } catch (error) {
+                    failCount++;
+                }
+            }
+
+            alert(`Import completed. Success: ${successCount}, Failed: ${failCount}`);
+            if (successCount > 0) {
+                clearPreview();
+            }
+        }
+        
+        function clearPreview() {
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('csvFile').value = '';
+            csvData = [];
+            headers = [];
+        }
+        
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                handleFile(file);
+            } else {
+                alert('Please upload a CSV file');
+            }
+        });
+    </script>
+</body>
+</html>

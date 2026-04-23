@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduInsight - Role Selection</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="role-container">
+        <div class="role-card">
+            <h1 class="role-title">🎓 EduInsight</h1>
+            <p class="role-subtitle">Smart Student Performance Analyzer</p>
+            
+            <div class="role-options">
+                <div class="role-option" data-role="student">
+                    <div class="emoji">👨‍🎓</div>
+                    <h3>Student</h3>
+                    <p>Track your performance</p>
+                </div>
+                <div class="role-option" data-role="teacher">
+                    <div class="emoji">👩‍🏫</div>
+                    <h3>Teacher</h3>
+                    <p>Manage students</p>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary continue-btn" onclick="continueToLogin()">Continue →</button>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        let selectedRole = null;
+        
+        document.querySelectorAll('.role-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedRole = this.dataset.role;
+            });
+        });
+        
+        function continueToLogin() {
+            if (!selectedRole) {
+                alert('Please select a role first');
+                return;
+            }
+            localStorage.setItem('userRole', selectedRole);
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

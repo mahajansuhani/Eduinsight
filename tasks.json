@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Compile Backend",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "javac -d bin -cp \".;lib/*\" -sourcepath src src\\Main.java src\\dao\\UserDAO.java src\\model\\User.java src\\util\\DBConnection.java src\\utils\\KaggleImporter.java"
+      ],
+      "group": "build",
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Run Backend Main",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "java -cp \".;bin;lib/*\" Main"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Backend Test",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "Starting backend compile and run..."
+      ],
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Compile Backend",
+        "Run Backend Main"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
