@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Setup - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+ </head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-setup.html">Update Data</a>
+            <a href="student-report.html">View Report</a>
+            <a href="#" onclick="downloadReport(); return false;">Download Report</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="setup-container">
+        <div class="setup-card">
+            <h2>🎓 Student Setup</h2>
+            <p>Complete your profile in 5 simple steps</p>
+
+            <div class="progress-steps">
+                <div class="step active" id="step1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Basic Info</div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Academic</div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Exam Results</div>
+                </div>
+                <div class="step" id="step4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Skills</div>
+                </div>
+                <div class="step" id="step5">
+                    <div class="step-number">5</div>
+                    <div class="step-label">Complete</div>
+                </div>
+            </div>
+
+            <!-- Step 1: Basic Information -->
+            <div class="form-step active" id="step1Form">
+                <h3>📝 Basic Information</h3>
+                <p>Tell us about yourself</p>
+                
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" class="form-control" id="fullName" placeholder="Enter your full name">
+                </div>
+                
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" class="form-control" id="email" placeholder="your@email.com">
+                </div>
+                
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Stream *</label>
+                        <select class="form-control" id="stream" title="Stream">
+                            <option value="">Select Stream</option>
+                            <option>Science</option>
+                            <option>Commerce</option>
+                            <option>Arts</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select class="form-control" id="gender" title="Gender">
+                            <option>Male</option>
+                            <option>Female</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>Age</label>
+                        <input type="number" class="form-control" id="age" placeholder="Age">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" class="form-control" id="phone" placeholder="Phone number">
+                    </div>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <div></div>
+                    <button class="btn btn-primary" onclick="nextStep(2)">Next →</button>
+                </div>
+            </div>
+            
+            <!-- Step 2: Academic Data -->
+            <div class="form-step" id="step2Form">
+                <h3>📚 Academic Information</h3>
+                <p>Enter your current academic performance</p>
+                
+                <div class="form-group">
+                    <label>Attendance (%) *</label>
+                    <input type="number" class="form-control" id="attendance" step="0.1" placeholder="e.g., 85">
+                    <small>Current attendance percentage (0-100)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Study Hours per Day *</label>
+                    <input type="number" class="form-control" id="studyHours" step="0.5" placeholder="e.g., 4.5">
+                    <small>Average hours you study daily</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Assignment Score (%) *</label>
+                    <input type="number" class="form-control" id="assignmentScore" step="0.1" placeholder="e.g., 78">
+                    <small>Average score in assignments</small>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button class="btn btn-outline" onclick="prevStep(1)">← Back</button>
+                    <button class="btn btn-primary" onclick="nextStep(3)">Next →</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Exam Results -->
+            <div class="form-step" id="step3Form">
+                <h3>📊 Exam Results</h3>
+                <p>Add your recent exam scores</p>
+                
+                <div id="subjectsContainer">
+                    <div class="subject-row subject-header">
+                        <div>Subject</div>
+                        <div>Marks</div>
+                        <div>Total</div>
+                        <div></div>
+                    </div>
+                    <div id="subjectsList">
+                        <div class="subject-row" data-index="0">
+                            <input type="text" class="form-control" placeholder="Subject" value="Mathematics">
+                            <input type="number" class="form-control" placeholder="Marks" value="75">
+                            <input type="number" class="form-control" placeholder="Total" value="100">
+                            <button class="remove-subject" onclick="removeSubject(this)">🗑️</button>
+                        </div>
+                        <div class="subject-row" data-index="1">
+                            <input type="text" class="form-control" placeholder="Subject" value="Physics">
+                            <input type="number" class="form-control" placeholder="Marks" value="82">
+                            <input type="number" class="form-control" placeholder="Total" value="100">
+                            <button class="remove-subject" onclick="removeSubject(this)">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="add-subject-btn" onclick="addSubject()">+ Add Subject</button>
+                
+                <div class="navigation-buttons">
+                    <button class="btn btn-outline" onclick="prevStep(2)">← Back</button>
+                    <button class="btn btn-primary" onclick="nextStep(4)">Next →</button>
+                </div>
+            </div>
+            
+            <!-- Step 4: Skills & Activities -->
+            <div class="form-step" id="step4Form">
+                <h3>🎯 Skills & Activities</h3>
+                <p>Tell us about your skills and extracurriculars</p>
+                
+                <div class="form-group">
+                    <label>Technical Skills</label>
+                    <input type="text" class="form-control" id="technicalSkills" placeholder="e.g., Java, Python, SQL">
+                </div>
+                
+                <div class="form-group">
+                    <label>Certifications</label>
+                    <input type="text" class="form-control" id="certifications" placeholder="e.g., AWS, Oracle, Microsoft">
+                </div>
+                
+                <div class="form-group">
+                    <label>Extracurricular Activities</label>
+                    <select class="form-control" id="extracurricular" title="Extracurricular activities">
+                        <option>None</option>
+                        <option>Sports</option>
+                        <option>Music</option>
+                        <option>Debate</option>
+                        <option>Volunteering</option>
+                        <option>Multiple</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Part-time Job</label>
+                    <select class="form-control" id="partTimeJob" title="Part-time job status">
+                        <option>No</option>
+                        <option>Yes - Less than 10 hours</option>
+                        <option>Yes - 10-20 hours</option>
+                        <option>Yes - More than 20 hours</option>
+                    </select>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button class="btn btn-outline" onclick="prevStep(3)">← Back</button>
+                    <button class="btn btn-primary" onclick="nextStep(5)">Review & Complete →</button>
+                </div>
+            </div>
+            
+            <!-- Step 5: Summary & Complete -->
+            <div class="form-step" id="step5Form">
+                <h3>✅ Review Your Profile</h3>
+                <p>Please review your information before submitting</p>
+                
+                <div id="summaryContainer"></div>
+                
+                <div class="prediction-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin-top: 20px; text-align: center;">
+                    <h4>🎯 Your Predicted GPA</h4>
+                    <div style="font-size: 48px; font-weight: bold;" id="predictedGPA">0.00</div>
+                    <div id="riskLevel"></div>
+                </div>
+                
+                <div class="navigation-buttons">
+                    <button class="btn btn-outline" onclick="prevStep(4)">← Back</button>
+                    <button class="btn btn-success" onclick="completeSetup()">✅ Complete Setup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let subjects = [
+            { name: 'Mathematics', marks: 75, total: 100 },
+            { name: 'Physics', marks: 82, total: 100 }
+        ];
+        let subjectCounter = 2;
+        
+        function updateSteps(currentStep) {
+            for (let i = 1; i <= 5; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                const formElement = document.getElementById(`step${i}Form`);
+                
+                if (i < currentStep) {
+                    stepElement.classList.add('completed');
+                    stepElement.classList.remove('active');
+                } else if (i === currentStep) {
+                    stepElement.classList.add('active');
+                    stepElement.classList.remove('completed');
+                    formElement.classList.add('active');
+                } else {
+                    stepElement.classList.remove('active', 'completed');
+                    formElement.classList.remove('active');
+                }
+            }
+        }
+        
+        function nextStep(step) {
+            // Validate current step before proceeding
+            if (step === 2 && !validateStep1()) return;
+            if (step === 3 && !validateStep2()) return;
+            if (step === 4) collectSubjects();
+            if (step === 5) updateSummary();
+            
+            updateSteps(step);
+        }
+        
+        function prevStep(step) {
+            updateSteps(step);
+        }
+        
+        function validateStep1() {
+            const name = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const stream = document.getElementById('stream').value;
+            
+            if (!name) {
+                alert('Please enter your full name');
+                return false;
+            }
+            if (!email) {
+                alert('Please enter your email');
+                return false;
+            }
+            if (!stream) {
+                alert('Please select your stream');
+                return false;
+            }
+            return true;
+        }
+        
+        function validateStep2() {
+            const attendance = document.getElementById('attendance').value;
+            const studyHours = document.getElementById('studyHours').value;
+            const assignmentScore = document.getElementById('assignmentScore').value;
+            
+            if (!attendance) {
+                alert('Please enter your attendance percentage');
+                return false;
+            }
+            if (!studyHours) {
+                alert('Please enter your study hours');
+                return false;
+            }
+            if (!assignmentScore) {
+                alert('Please enter your assignment score');
+                return false;
+            }
+            
+            if (attendance < 0 || attendance > 100) {
+                alert('Attendance must be between 0 and 100');
+                return false;
+            }
+            if (studyHours < 0 || studyHours > 24) {
+                alert('Study hours must be between 0 and 24');
+                return false;
+            }
+            if (assignmentScore < 0 || assignmentScore > 100) {
+                alert('Assignment score must be between 0 and 100');
+                return false;
+            }
+            return true;
+        }
+        
+        function addSubject() {
+            subjectCounter++;
+            const subjectsList = document.getElementById('subjectsList');
+            const newSubject = document.createElement('div');
+            newSubject.className = 'subject-row';
+            newSubject.setAttribute('data-index', subjectCounter);
+            newSubject.innerHTML = `
+                <input type="text" class="form-control" placeholder="Subject" value="New Subject">
+                <input type="number" class="form-control" placeholder="Marks" value="0">
+                <input type="number" class="form-control" placeholder="Total" value="100">
+                <button class="remove-subject" onclick="removeSubject(this)">🗑️</button>
+            `;
+            subjectsList.appendChild(newSubject);
+        }
+        
+        function removeSubject(button) {
+            const row = button.closest('.subject-row');
+            if (document.querySelectorAll('.subject-row').length > 1) {
+                row.remove();
+            } else {
+                alert('You need at least one subject');
+            }
+        }
+        
+        function collectSubjects() {
+            subjects = [];
+            const rows = document.querySelectorAll('#subjectsList .subject-row');
+            rows.forEach(row => {
+                const inputs = row.querySelectorAll('input');
+                const name = inputs[0].value;
+                const marks = parseInt(inputs[1].value);
+                const total = parseInt(inputs[2].value);
+                if (name && !isNaN(marks) && !isNaN(total)) {
+                    subjects.push({ name, marks, total });
+                }
+            });
+        }
+        
+        function calculateGPA() {
+            const attendance = parseFloat(document.getElementById('attendance').value) || 0;
+            const studyHours = parseFloat(document.getElementById('studyHours').value) || 0;
+            const assignmentScore = parseFloat(document.getElementById('assignmentScore').value) || 0;
+            
+            let examAverage = 0;
+            if (subjects.length > 0) {
+                const totalPercentage = subjects.reduce((sum, sub) => {
+                    return sum + ((sub.marks / sub.total) * 100);
+                }, 0);
+                examAverage = totalPercentage / subjects.length;
+            }
+            
+            const gpa = (attendance / 100) * 4 * 0.4 +
+                        (studyHours / 8) * 4 * 0.3 +
+                        (assignmentScore / 100) * 4 * 0.2 +
+                        (examAverage / 100) * 4 * 0.1;
+            
+            return Math.min(gpa, 4.0).toFixed(2);
+        }
+        
+        function getRiskLevel(gpa) {
+            if (gpa < 2.0) return { text: '🔴 HIGH RISK', color: '#FF4C4C' };
+            if (gpa < 2.5) return { text: '🟠 MEDIUM RISK', color: '#FF9800' };
+            if (gpa < 3.0) return { text: '🟡 LOW RISK', color: '#FFC107' };
+            return { text: '🟢 SAFE', color: '#4CAF50' };
+        }
+        
+        function updateSummary() {
+            const name = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const stream = document.getElementById('stream').value;
+            const gender = document.getElementById('gender').value;
+            const age = document.getElementById('age').value;
+            const phone = document.getElementById('phone').value;
+            const attendance = document.getElementById('attendance').value;
+            const studyHours = document.getElementById('studyHours').value;
+            const assignmentScore = document.getElementById('assignmentScore').value;
+            const technicalSkills = document.getElementById('technicalSkills').value;
+            const certifications = document.getElementById('certifications').value;
+            const extracurricular = document.getElementById('extracurricular').value;
+            const partTimeJob = document.getElementById('partTimeJob').value;
+            
+            const gpa = calculateGPA();
+            const risk = getRiskLevel(gpa);
+            
+            document.getElementById('predictedGPA').textContent = gpa;
+            document.getElementById('riskLevel').innerHTML = `<span style="color: ${risk.color};">${risk.text}</span>`;
+            
+            const summaryContainer = document.getElementById('summaryContainer');
+            summaryContainer.innerHTML = `
+                <div class="summary-item"><span class="summary-label">Full Name:</span><span class="summary-value">${name}</span></div>
+                <div class="summary-item"><span class="summary-label">Email:</span><span class="summary-value">${email}</span></div>
+                <div class="summary-item"><span class="summary-label">Stream:</span><span class="summary-value">${stream}</span></div>
+                <div class="summary-item"><span class="summary-label">Gender:</span><span class="summary-value">${gender}</span></div>
+                <div class="summary-item"><span class="summary-label">Age:</span><span class="summary-value">${age || 'Not provided'}</span></div>
+                <div class="summary-item"><span class="summary-label">Phone:</span><span class="summary-value">${phone || 'Not provided'}</span></div>
+                <div class="summary-item"><span class="summary-label">Attendance:</span><span class="summary-value">${attendance}%</span></div>
+                <div class="summary-item"><span class="summary-label">Study Hours:</span><span class="summary-value">${studyHours} hrs/day</span></div>
+                <div class="summary-item"><span class="summary-label">Assignment Score:</span><span class="summary-value">${assignmentScore}%</span></div>
+                <div class="summary-item"><span class="summary-label">Subjects:</span><span class="summary-value">${subjects.length} subjects</span></div>
+                <div class="summary-item"><span class="summary-label">Technical Skills:</span><span class="summary-value">${technicalSkills || 'None'}</span></div>
+                <div class="summary-item"><span class="summary-label">Certifications:</span><span class="summary-value">${certifications || 'None'}</span></div>
+            `;
+        }
+        
+        function completeSetup() {
+            const attendance = parseFloat(document.getElementById('attendance').value) || 0;
+            const studyHours = parseFloat(document.getElementById('studyHours').value) || 0;
+            const assignmentScore = parseFloat(document.getElementById('assignmentScore').value) || 0;
+
+            const gpa = calculateGPA();
+            const risk = getRiskLevel(gpa);
+
+            const userData = {
+                name: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                stream: document.getElementById('stream').value,
+                gender: document.getElementById('gender').value,
+                age: document.getElementById('age').value || '0',
+                phone: document.getElementById('phone').value || '',
+                attendance: attendance,
+                studyHours: studyHours,
+                assignmentScore: assignmentScore,
+                gpa: parseFloat(gpa),
+                riskLevel: risk.text,
+                subjects: subjects
+            };
+
+            // Save to both storage locations for compatibility
+            localStorage.setItem('studentProfile', JSON.stringify(userData));
+            localStorage.setItem('studentGpaData', JSON.stringify({
+                gpa: parseFloat(gpa),
+                riskLevel: risk.text,
+                attendance: attendance,
+                studyHours: studyHours,
+                assignmentScore: assignmentScore
+            }));
+
+            localStorage.setItem('isProfileComplete', 'true');
+
+            alert('✅ Profile setup complete! Redirecting to dashboard...');
+            window.location.href = 'student-dashboard.html';
+        }
+
+        function logoutToHome() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = 'index.html';
+        }
+
+        function downloadReport() {
+            window.location.href = 'student-report.html';
+        }
+        
+        // Initialize first step
+        updateSteps(1);
+    </script>
+</body>
+</html>

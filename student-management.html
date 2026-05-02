@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="teacher-dashboard.html">Dashboard</a>
+            <a href="student-management.html">Manage Students</a>
+            <a href="csv-import.html">Import CSV</a>
+            <a href="attendance.html">Attendance</a>
+            <a href="exam-results.html">Exam Results</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="teacher-page-tabs" aria-label="Teacher pages">
+            <a class="teacher-page-tab" href="teacher-dashboard.html">Overview</a>
+            <a class="teacher-page-tab active" href="student-management.html">Students</a>
+            <a class="teacher-page-tab" href="attendance.html">Attendance</a>
+            <a class="teacher-page-tab" href="exam-results.html">Exam Results</a>
+            <a class="teacher-page-tab" href="csv-import.html">CSV Import</a>
+        </div>
+
+        <div class="flex-between-center mb-30">
+            <h2>👨‍🎓 Student Management</h2>
+            <button class="btn btn-primary" onclick="openAddModal()">➕ Add New Student</button>
+        </div>
+        
+        <!-- Search and Filter -->
+        <div class="card mb-20">
+            <div class="grid grid-3">
+                <input type="text" class="form-control" placeholder="Search by name..." id="searchName">
+                <select class="form-control" id="filterStream" title="Filter by stream">
+                    <option value="">All Streams</option>
+                    <option>Science</option>
+                    <option>Commerce</option>
+                    <option>Arts</option>
+                </select>
+                <button class="btn btn-primary" onclick="filterStudents()">🔍 Search</button>
+            </div>
+        </div>
+        
+        <!-- Students Table -->
+        <div class="card">
+            <div class="table-container">
+                <table id="studentsTable">
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Stream</th><th>Attendance</th><th>GPA</th><th>Risk</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="studentsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add/Edit Student Modal -->
+    <div id="studentModal" class="form-modal">
+        <div class="form-container">
+            <h3 id="modalTitle">Add New Student</h3>
+            <form id="studentForm">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" class="form-control" id="studentName" title="Student full name" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="studentEmail" title="Student email" placeholder="Enter email" required>
+                </div>
+                <div class="form-group">
+                    <label>Stream</label>
+                    <select class="form-control" id="studentStream" title="Student stream">
+                        <option>Science</option>
+                        <option>Commerce</option>
+                        <option>Arts</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Attendance (%)</label>
+                    <input type="number" class="form-control" id="studentAttendance" title="Attendance percentage" placeholder="0-100" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Study Hours/Day</label>
+                    <input type="number" class="form-control" id="studentStudyHours" title="Study hours per day" placeholder="Hours per day" step="0.5">
+                </div>
+                <div class="form-group">
+                    <label>Assignment Score (%)</label>
+                    <input type="number" class="form-control" id="studentAssignmentScore" title="Assignment score" placeholder="0-100" step="0.1">
+                </div>
+                <div class="flex-row-10-mt20">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('teacher');
+        let students = [];
+        let editingId = null;
+
+        async function fetchStudents() {
+            try {
+                const data = await apiGet('/students');
+
+                students = data.students || [];
+                localStorage.setItem('studentsCache', JSON.stringify(students));
+                loadStudents();
+            } catch (error) {
+                alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+            }
+        }
+        
+        function loadStudents() {
+            const tbody = document.getElementById('studentsTableBody');
+            tbody.innerHTML = '';
+            
+            students.forEach(student => {
+                const riskClass = riskClassFromLevel(student.riskLevel);
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.email}</td>
+                    <td>${student.stream}</td>
+                    <td>${student.attendance}%</td>
+                    <td>${student.gpa}</td>
+                    <td class="${riskClass}">${student.riskLevel || 'SAFE'}</td>
+                    <td>
+                        <button class="btn btn-outline btn-compact" onclick="editStudent(${student.id})">✏️</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteStudent(${student.id})">🗑️</button>
+                    </td>
+                `;
+            });
+        }
+        
+        function openAddModal() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Student';
+            document.getElementById('studentForm').reset();
+            document.getElementById('studentModal').classList.add('active');
+        }
+        
+        function editStudent(id) {
+            editingId = id;
+            alert('Edit endpoint is not added yet. You can add and delete students now.');
+        }
+        
+        async function deleteStudent(id) {
+            if (confirm('Are you sure you want to delete this student?')) {
+                try {
+                    await apiDelete(`/students?id=${id}`);
+                    await fetchStudents();
+                    alert('Student deleted successfully!');
+                } catch (error) {
+                    alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+                }
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('studentModal').classList.remove('active');
+        }
+        
+        function calculateGPA(attendance, studyHours, assignmentScore) {
+            return ((attendance / 100) * 4 * 0.4 + (studyHours / 8) * 4 * 0.4 + (assignmentScore / 100) * 4 * 0.2).toFixed(2);
+        }
+        
+        function getRiskLevel(gpa) {
+            if (gpa < 2.0) return 'High';
+            if (gpa < 2.5) return 'Medium';
+            return 'Low';
+        }
+        
+        document.getElementById('studentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            if (editingId) {
+                alert('Edit endpoint is not added yet. Please add new students or delete existing ones.');
+                return;
+            }
+            
+            const attendance = parseFloat(document.getElementById('studentAttendance').value);
+            const studyHours = parseFloat(document.getElementById('studentStudyHours').value);
+            const assignmentScore = parseFloat(document.getElementById('studentAssignmentScore').value);
+
+            try {
+                await apiPostForm('/register', {
+                    name: document.getElementById('studentName').value.trim(),
+                    email: document.getElementById('studentEmail').value.trim(),
+                    password: 'temp123',
+                    role: 'student',
+                    stream: document.getElementById('studentStream').value,
+                    subject: '',
+                    gender: '',
+                    age: '0',
+                    phone: '',
+                    attendance: Number.isFinite(attendance) ? String(attendance) : '0',
+                    studyHours: Number.isFinite(studyHours) ? String(studyHours) : '0',
+                    assignmentScore: Number.isFinite(assignmentScore) ? String(assignmentScore) : '0'
+                });
+
+                alert('Student added successfully! Default password: temp123');
+                closeModal();
+                await fetchStudents();
+            } catch (error) {
+                alert(error.message || 'Cannot reach backend server. Start Java backend first.');
+            }
+        });
+        
+        function filterStudents() {
+            const searchTerm = document.getElementById('searchName').value.toLowerCase();
+            const streamFilter = document.getElementById('filterStream').value;
+            
+            const filtered = students.filter(s => {
+                const matchName = s.name.toLowerCase().includes(searchTerm);
+                const matchStream = !streamFilter || s.stream === streamFilter;
+                return matchName && matchStream;
+            });
+            
+            const tbody = document.getElementById('studentsTableBody');
+            tbody.innerHTML = '';
+            
+            filtered.forEach(student => {
+                const riskClass = riskClassFromLevel(student.riskLevel);
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.email}</td>
+                    <td>${student.stream}</td>
+                    <td>${student.attendance}%</td>
+                    <td>${student.gpa}</td>
+                    <td class="${riskClass}">${student.riskLevel || 'SAFE'}</td>
+                    <td>
+                        <button class="btn btn-outline btn-compact" onclick="editStudent(${student.id})">✏️</button>
+                        <button class="btn btn-danger btn-compact" onclick="deleteStudent(${student.id})">🗑️</button>
+                    </td>
+                `;
+            });
+        }
+        
+        fetchStudents();
+    </script>
+</body>
+</html>

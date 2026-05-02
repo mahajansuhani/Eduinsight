@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Management - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="teacher-dashboard.html">Dashboard</a>
+            <a href="student-management.html">Manage Students</a>
+            <a href="csv-import.html">Import CSV</a>
+            <a href="attendance.html">Attendance</a>
+            <a href="exam-results.html">Exam Results</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="teacher-page-tabs" aria-label="Teacher pages">
+            <a class="teacher-page-tab" href="teacher-dashboard.html">Overview</a>
+            <a class="teacher-page-tab" href="student-management.html">Students</a>
+            <a class="teacher-page-tab" href="attendance.html">Attendance</a>
+            <a class="teacher-page-tab" href="exam-results.html">Exam Results</a>
+            <a class="teacher-page-tab" href="csv-import.html">CSV Import</a>
+        </div>
+
+        <h2>📅 Attendance Management</h2>
+        <p>Mark attendance for students and track their presence</p>
+        
+        <div class="card" style="margin-bottom: 20px; padding: 20px;">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label for="attendanceDate">Select Date:</label>
+                    <input type="date" id="attendanceDate" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;">
+                </div>
+                <div>
+                    <label for="streamFilter">Select Stream:</label>
+                    <select id="streamFilter" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;">
+                        <option value="all">All Streams</option>
+                        <option value="Science">Science</option>
+                        <option value="Commerce">Commerce</option>
+                        <option value="Arts">Arts</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadAttendance()">Load Students</button>
+                <button class="btn btn-success" onclick="saveAttendance()">Save Attendance</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-3" id="statsSummary" style="display: none; margin-bottom: 20px;">
+            <div class="card text-center">
+                <div style="font-size: 32px;">📊</div>
+                <div class="stat-value" id="totalStudents">0</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 32px;">✅</div>
+                <div class="stat-value" id="presentCount" style="color: #4CAF50;">0</div>
+                <div class="stat-label">Present</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 32px;">❌</div>
+                <div class="stat-value" id="absentCount" style="color: #FF4C4C;">0</div>
+                <div class="stat-label">Absent</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">👨‍🎓 Mark Attendance</h3>
+            <div class="table-container">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr><th>ID</th><th>Student Name</th><th>Stream</th><th>Status</th><th>Notes</th><th>Action</th></tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <tr><td colspan="6" style="text-align: center;">Select a date and click "Load Students"</td><tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h3 class="card-title">📤 Bulk Upload Attendance (CSV)</h3>
+            <p>Upload a CSV file with attendance data. <a href="#" onclick="downloadAttendanceTemplate()">Download template</a></p>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <input type="file" id="attendanceCSV" accept=".csv" style="display: none;">
+                <button class="btn btn-outline" onclick="document.getElementById('attendanceCSV').click()">Choose File</button>
+                <button class="btn btn-primary" onclick="bulkUploadAttendance()">Upload & Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('teacher');
+        
+        let students = [];
+        let attendanceRecords = {};
+        
+        async function loadAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            const stream = document.getElementById('streamFilter').value;
+            
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            try {
+                const data = await apiGet('/students');
+                students = data.students || [];
+                
+                try {
+                    const attendanceData = await fetch(`http://localhost:8080/api/attendance?date=${date}`);
+                    const attendanceResult = await attendanceData.json();
+                    
+                    if (attendanceResult.success && attendanceResult.attendance) {
+                        attendanceRecords[date] = {};
+                        attendanceResult.attendance.forEach(record => {
+                            attendanceRecords[date][record.studentId] = {
+                                status: record.status,
+                                notes: record.notes || ''
+                            };
+                        });
+                    }
+                } catch (error) {
+                    console.log('No existing attendance for this date');
+                }
+                
+                if (!attendanceRecords[date]) {
+                    attendanceRecords[date] = {};
+                    students.forEach(s => {
+                        attendanceRecords[date][s.id] = { status: 'present', notes: '' };
+                    });
+                }
+                
+                let filteredStudents = students;
+                if (stream !== 'all') {
+                    filteredStudents = students.filter(s => s.stream === stream);
+                }
+                
+                const presentCount = filteredStudents.filter(s => attendanceRecords[date][s.id]?.status === 'present').length;
+                const absentCount = filteredStudents.filter(s => attendanceRecords[date][s.id]?.status === 'absent').length;
+                
+                document.getElementById('totalStudents').textContent = filteredStudents.length;
+                document.getElementById('presentCount').textContent = presentCount;
+                document.getElementById('absentCount').textContent = absentCount;
+                document.getElementById('statsSummary').style.display = 'grid';
+                
+                const tbody = document.getElementById('attendanceTableBody');
+                tbody.innerHTML = '';
+                
+                filteredStudents.forEach(student => {
+                    const record = attendanceRecords[date][student.id] || { status: 'present', notes: '' };
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${student.id}</td>
+                        <td>${student.name}</td>
+                        <td>${student.stream}</td>
+                        <td id="status-${student.id}">
+                            <span class="${record.status === 'present' ? 'present-status' : 'absent-status'}">
+                                ${record.status === 'present' ? '✅ Present' : '❌ Absent'}
+                            </span>
+                        </td>
+                        <td><input type="text" class="form-control" id="notes-${student.id}" placeholder="Add notes..." value="${(record.notes || '').replace(/"/g, '&quot;')}" style="width: 150px;"></td>
+                        <td>
+                            <button class="present-btn" onclick="markPresent(${student.id}, '${date}')">Present</button>
+                            <button class="absent-btn" onclick="markAbsent(${student.id}, '${date}')">Absent</button>
+                        </td>
+                    `;
+                });
+            } catch (error) {
+                alert('Failed to load students. Make sure backend is running.');
+            }
+        }
+        
+        function markPresent(studentId, date) {
+            if (attendanceRecords[date] && attendanceRecords[date][studentId]) {
+                attendanceRecords[date][studentId].status = 'present';
+                document.getElementById(`status-${studentId}`).innerHTML = '<span class="present-status">✅ Present</span>';
+                updateStats(date);
+            }
+        }
+        
+        function markAbsent(studentId, date) {
+            if (attendanceRecords[date] && attendanceRecords[date][studentId]) {
+                attendanceRecords[date][studentId].status = 'absent';
+                document.getElementById(`status-${studentId}`).innerHTML = '<span class="absent-status">❌ Absent</span>';
+                updateStats(date);
+            }
+        }
+        
+        function updateStats(date) {
+            const stream = document.getElementById('streamFilter').value;
+            let filteredStudents = students;
+            if (stream !== 'all') {
+                filteredStudents = students.filter(s => s.stream === stream);
+            }
+            
+            const presentCount = filteredStudents.filter(s => attendanceRecords[date][s.id]?.status === 'present').length;
+            const absentCount = filteredStudents.filter(s => attendanceRecords[date][s.id]?.status === 'absent').length;
+            
+            document.getElementById('presentCount').textContent = presentCount;
+            document.getElementById('absentCount').textContent = absentCount;
+        }
+        
+        async function saveAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            const currentUser = getCurrentUser();
+            const teacherId = currentUser?.id || 1;
+            let savedCount = 0;
+            let failCount = 0;
+            
+            for (const student of students) {
+                const status = attendanceRecords[date]?.[student.id]?.status || 'present';
+                const notes = document.getElementById(`notes-${student.id}`)?.value || '';
+                
+                try {
+                    const response = await fetch('http://localhost:8080/api/attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({
+                            studentId: student.id,
+                            date: date,
+                            status: status,
+                            notes: notes,
+                            markedBy: teacherId
+                        }).toString()
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) savedCount++;
+                    else failCount++;
+                } catch (error) {
+                    failCount++;
+                }
+            }
+            
+            localStorage.setItem('attendanceRecords', JSON.stringify(attendanceRecords));
+            alert(`Attendance for ${date} saved!\n✅ Success: ${savedCount}\n❌ Failed: ${failCount}`);
+        }
+        
+        function downloadAttendanceTemplate() {
+            const template = "Student ID,Student Name,Status,Notes\n1,John Doe,Present,\n2,Jane Smith,Absent,Sick leave";
+            const blob = new Blob([template], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'attendance_template.csv';
+            link.click();
+        }
+        
+        function bulkUploadAttendance() {
+            const fileInput = document.getElementById('attendanceCSV');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+                const date = document.getElementById('attendanceDate').value;
+                
+                if (!date) {
+                    alert('Please select a date first');
+                    return;
+                }
+                
+                if (!attendanceRecords[date]) {
+                    attendanceRecords[date] = {};
+                    students.forEach(s => {
+                        attendanceRecords[date][s.id] = { status: 'present', notes: '' };
+                    });
+                }
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    if (parts.length >= 3) {
+                        const studentId = parseInt(parts[0]);
+                        const status = parts[2].toLowerCase().trim();
+                        
+                        if (attendanceRecords[date][studentId]) {
+                            attendanceRecords[date][studentId].status = status === 'present' ? 'present' : 'absent';
+                            if (parts[3]) {
+                                attendanceRecords[date][studentId].notes = parts[3].trim();
+                            }
+                        }
+                    }
+                }
+                loadAttendance();
+                alert('Bulk attendance uploaded successfully!');
+            };
+            reader.readAsText(file);
+        }
+        
+        const storedRecords = localStorage.getItem('attendanceRecords');
+        if (storedRecords) {
+            attendanceRecords = JSON.parse(storedRecords);
+        }
+        
+        document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+        
+        function logoutToHome() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

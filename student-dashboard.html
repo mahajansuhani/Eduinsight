@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-setup.html">Update Data</a>
+            <a href="student-report.html">View Report</a>
+            <a href="#" onclick="downloadStudentDataFile(); return false;">Download Report</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1 id="welcomeTitle">👋 Welcome back!</h1>
+            <p>Track your academic performance and get personalized insights</p>
+        </div>
+
+        <div class="grid grid-2 mb-30">
+            <div class="card">
+                <h3 class="card-title">🧭 Quick Actions</h3>
+                <div class="grid grid-2">
+                    <a class="btn btn-primary" href="student-setup.html" style="text-decoration:none; justify-content:center;">📝 Update Data</a>
+                    <a class="btn btn-success" href="student-report.html" style="text-decoration:none; justify-content:center;">📄 View Report</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">⬇ Download</h3>
+                <p>Download your current student data as a real CSV file.</p>
+                <button class="btn btn-outline mt-20" type="button" onclick="downloadStudentDataFile()">Download Student File</button>
+            </div>
+        </div>
+
+        <div class="dashboard-tabs" aria-label="Student dashboard sections">
+            <button class="dashboard-tab active" type="button" data-tab="overview">Overview</button>
+            <button class="dashboard-tab" type="button" data-tab="performance">Performance</button>
+            <button class="dashboard-tab" type="button" data-tab="report">View Report</button>
+        </div>
+
+        <div class="dashboard-panel active" data-panel="overview">
+            <div class="grid grid-3 mb-30">
+                <div class="card text-center">
+                    <div class="gpa-circle" id="gpaCircle">
+                        <div class="gpa-value" id="gpaValue">3.2</div>
+                    </div>
+                    <h3>Predicted GPA</h3>
+                    <p class="text-muted">out of 4.0</p>
+                    <div class="progress-bar mt-20">
+                        <div class="progress-fill" id="gpaProgress" style="width: 80%"></div>
+                    </div>
+                </div>
+
+                <div class="card text-center">
+                    <div style="font-size: 48px; margin-bottom: 10px;" id="riskEmoji">🟢</div>
+                    <h3>Risk Level</h3>
+                    <h2 id="riskLevel" class="risk-low">LOW</h2>
+                    <p>You're on track!</p>
+                </div>
+
+                <div class="card text-center">
+                    <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
+                    <h3>Class Rank</h3>
+                    <h2 id="rankValue">Top 35%</h2>
+                    <p>of 6,607 students</p>
+                </div>
+            </div>
+
+            <div class="grid grid-2 mb-30">
+                <div class="card">
+                    <h3 class="card-title">📈 Performance Overview</h3>
+                    <canvas id="performanceChart" height="200"></canvas>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">🎯 Smart Recommendations</h3>
+                    <div id="recommendationsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-panel" data-panel="performance">
+            <div class="card mb-30">
+                <h3 class="card-title">📚 Subject-wise Performance</h3>
+                <div class="grid grid-2">
+                    <div>
+                        <div class="subject-card">
+                            <div class="subject-name">Mathematics</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 72%; background: #FF9800;"></div></div>
+                            <span>72% - Needs Improvement</span>
+                        </div>
+                        <div class="subject-card">
+                            <div class="subject-name">Physics</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 85%; background: #4CAF50;"></div></div>
+                            <span>85% - Good</span>
+                        </div>
+                        <div class="subject-card">
+                            <div class="subject-name">Chemistry</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 78%; background: #FF9800;"></div></div>
+                            <span>78% - Average</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="subject-card">
+                            <div class="subject-name">English</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 88%; background: #4CAF50;"></div></div>
+                            <span>88% - Good</span>
+                        </div>
+                        <div class="subject-card">
+                            <div class="subject-name">Computer Science</div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: 92%; background: #4CAF50;"></div></div>
+                            <span>92% - Excellent</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📋 Recent Exam Results</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr><th>Exam</th><th>Subject</th><th>Marks</th><th>Grade</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Mid-Term</td><td>Mathematics</td><td>72/100</td><td class="risk-medium">B-</td></tr>
+                            <tr><td>Mid-Term</td><td>Physics</td><td>85/100</td><td class="risk-low">A-</td></tr>
+                            <tr><td>Quiz 3</td><td>Computer Science</td><td>92/100</td><td class="risk-low">A</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-panel" data-panel="report">
+            <div class="grid grid-2 mb-30">
+                <div class="card">
+                    <h3 class="card-title">📈 Performance Overview</h3>
+                    <p id="reportOverviewText">Loading report overview...</p>
+                    <div class="subject-card mt-20">
+                        <div class="subject-name">Current Status</div>
+                        <p id="reportStatusText">Loading...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">📋 Report Summary</h3>
+                    <div class="subject-card">
+                        <div class="subject-name">Student</div>
+                        <p id="reportSummaryName">-</p>
+                    </div>
+                    <div class="subject-card">
+                        <div class="subject-name">Risk Level</div>
+                        <p id="reportSummaryRisk">-</p>
+                    </div>
+                    <div class="subject-card">
+                        <div class="subject-name">GPA</div>
+                        <p id="reportSummaryGpa">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-30">
+                <h3 class="card-title">🎯 Smart Recommendations</h3>
+                <div id="reportRecommendations"></div>
+            </div>
+
+            <div class="grid grid-2">
+                <button class="btn btn-primary" type="button" onclick="window.location.href='student-report.html'">📄 Open Full Report Page</button>
+                <button class="btn btn-success" type="button" onclick="window.location.href='student-report.html';">⬇ Download From Report Page</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const defaultStudentData = {
+            gpa: 3.2,
+            riskLevel: 'LOW',
+            attendance: 85,
+            studyHours: 4.5,
+            assignmentScore: 78
+        };
+
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        const performanceChart = new Chart(performanceCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Your GPA',
+                    data: [2.8, 2.9, 3.0, 3.1, 3.2, 3.3],
+                    borderColor: '#6C63FF',
+                    backgroundColor: 'rgba(108,99,255,0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        function getCurrentUser() {
+            return {
+                id: parseInt(localStorage.getItem('userId') || '0', 10) || 0,
+                name: localStorage.getItem('userName') || 'Student',
+                email: localStorage.getItem('userEmail') || 'student@example.com',
+                role: localStorage.getItem('userRole') || 'student'
+            };
+        }
+
+        function logoutToHome() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = 'index.html';
+        }
+
+        function riskClassFromLevel(riskLevel) {
+            const level = (riskLevel || 'SAFE').toUpperCase();
+            if (level === 'CRITICAL' || level === 'HIGH RISK') return 'risk-high';
+            if (level === 'MEDIUM RISK' || level === 'ATTENTION NEEDED') return 'risk-medium';
+            return 'risk-low';
+        }
+
+        function getStoredStudentData() {
+            const stored = localStorage.getItem('studentGpaData');
+            if (!stored) {
+                return { ...defaultStudentData };
+            }
+
+            try {
+                return { ...defaultStudentData, ...JSON.parse(stored) };
+            } catch (error) {
+                console.warn('Invalid studentGpaData in localStorage, using defaults.', error);
+                localStorage.removeItem('studentGpaData');
+                return { ...defaultStudentData };
+            }
+        }
+
+        function renderStudentData() {
+            const currentUser = getCurrentUser();
+            const studentData = getStoredStudentData();
+
+            document.getElementById('welcomeTitle').innerHTML = `👋 Welcome back, ${currentUser.name}!`;
+            document.getElementById('gpaValue').innerText = Number(studentData.gpa).toFixed(2);
+            document.getElementById('gpaProgress').style.width = `${Math.min((Number(studentData.gpa) / 4) * 100, 100)}%`;
+            document.getElementById('riskLevel').innerText = studentData.riskLevel;
+            document.getElementById('riskLevel').className = riskClassFromLevel(studentData.riskLevel);
+
+            const riskEmoji = document.getElementById('riskEmoji');
+            if ((studentData.riskLevel || '').toUpperCase() === 'CRITICAL' || (studentData.riskLevel || '').toUpperCase() === 'HIGH RISK') {
+                riskEmoji.textContent = '🔴';
+            } else if ((studentData.riskLevel || '').toUpperCase() === 'MEDIUM RISK') {
+                riskEmoji.textContent = '🟠';
+            } else {
+                riskEmoji.textContent = '🟢';
+            }
+
+            document.getElementById('recommendationsList').innerHTML = `
+                <div class="recommendation-item"><strong>📚 Study Hours</strong><p>${Number(studentData.studyHours) >= 6 ? 'Great job maintaining 6+ hours daily!' : 'Try to study 6+ hours per day for better GPA.'}</p></div>
+                <div class="recommendation-item"><strong>✅ Attendance</strong><p>${Number(studentData.attendance) >= 90 ? 'Excellent attendance record!' : 'Aim for 90% attendance to boost your GPA.'}</p></div>
+                <div class="recommendation-item"><strong>📝 Assignments</strong><p>${Number(studentData.assignmentScore) >= 85 ? 'Great work on assignments!' : 'Complete assignments on time to improve scores.'}</p></div>
+            `;
+
+            const reportOverview = document.getElementById('reportOverviewText');
+            const reportStatus = document.getElementById('reportStatusText');
+            const reportName = document.getElementById('reportSummaryName');
+            const reportRisk = document.getElementById('reportSummaryRisk');
+            const reportGpa = document.getElementById('reportSummaryGpa');
+            const reportRecommendations = document.getElementById('reportRecommendations');
+
+            if (reportOverview && reportStatus && reportName && reportRisk && reportGpa && reportRecommendations) {
+                reportOverview.textContent = `This snapshot is generated from your latest records. GPA is ${Number(studentData.gpa).toFixed(2)}, attendance is ${Number(studentData.attendance)}%, and assignment score is ${Number(studentData.assignmentScore)}%.`;
+                reportStatus.textContent = `${studentData.riskLevel} risk with ${Number(studentData.studyHours)} study hours/day.`;
+                reportName.textContent = currentUser.name;
+                reportRisk.textContent = studentData.riskLevel;
+                reportRisk.className = riskClassFromLevel(studentData.riskLevel);
+                reportGpa.textContent = `${Number(studentData.gpa).toFixed(2)} / 4.0`;
+                reportRecommendations.innerHTML = `
+                    <div class="recommendation-item"><strong>Study Plan</strong><p>${Number(studentData.studyHours) >= 6 ? 'Maintain your current routine to preserve momentum.' : 'Increase focused study time by at least 1 hour daily.'}</p></div>
+                    <div class="recommendation-item"><strong>Attendance Goal</strong><p>${Number(studentData.attendance) >= 90 ? 'Excellent consistency. Keep this level.' : 'Target at least 90% attendance over the next month.'}</p></div>
+                    <div class="recommendation-item"><strong>Assignments</strong><p>${Number(studentData.assignmentScore) >= 85 ? 'Your assignment performance is strong.' : 'Improve assignment quality and submission timeliness.'}</p></div>
+                `;
+            }
+
+        }
+
+        function setDashboardTab(tabName) {
+            document.querySelectorAll('.dashboard-tab').forEach((tab) => {
+                const isActive = tab.dataset.tab === tabName;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', String(isActive));
+            });
+
+            document.querySelectorAll('.dashboard-panel').forEach((panel) => {
+                panel.classList.toggle('active', panel.dataset.panel === tabName);
+            });
+
+            if (tabName === 'performance') {
+                performanceChart.update();
+            }
+        }
+
+        document.querySelectorAll('.dashboard-tab').forEach((tab) => {
+            tab.addEventListener('click', () => {
+                setDashboardTab(tab.dataset.tab);
+            });
+        });
+
+        function updateData() {
+            window.location.href = 'student-setup.html';
+        }
+
+        function downloadStudentDataFile() {
+            const currentUser = getCurrentUser();
+            const studentData = getStoredStudentData();
+            const timestamp = new Date().toISOString();
+
+            const headers = [
+                'name',
+                'email',
+                'role',
+                'gpa',
+                'riskLevel',
+                'attendance',
+                'studyHours',
+                'assignmentScore',
+                'exportedAt'
+            ];
+
+            const values = [
+                currentUser.name,
+                currentUser.email,
+                currentUser.role,
+                Number(studentData.gpa).toFixed(2),
+                studentData.riskLevel,
+                Number(studentData.attendance),
+                Number(studentData.studyHours),
+                Number(studentData.assignmentScore),
+                timestamp
+            ].map((value) => `"${String(value).replace(/"/g, '""')}"`);
+
+            const csvContent = `${headers.join(',')}\n${values.join(',')}\n`;
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const safeName = (currentUser.name || 'student').replace(/[^a-zA-Z0-9_-]/g, '_');
+            link.download = `EduInsight_Student_Data_${safeName}_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            alert('✅ Student data file downloaded successfully.');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderStudentData();
+            setDashboardTab('overview');
+        });
+
+        const modalStyle = document.createElement('style');
+        modalStyle.textContent = `
+            .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+            .modal-container { background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%; }
+            .form-group { margin-bottom: 20px; }
+            .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+            .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; }
+            .flex-row { display: flex; gap: 10px; margin-top: 20px; }
+            .recommendation-item { padding: 12px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid #6C63FF; }
+            .dashboard-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 20px; margin-bottom: 30px; }
+            .gpa-circle { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(#4CAF50 0deg 288deg, #e0e0e0 288deg 360deg); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
+            .gpa-value { font-size: 36px; font-weight: bold; }
+            .progress-bar { width: 100%; height: 8px; background: #e0e0e0; border-radius: 10px; overflow: hidden; }
+            .progress-fill { height: 100%; background: #6C63FF; border-radius: 10px; transition: width 0.5s; }
+            .subject-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+            .subject-name { font-weight: bold; margin-bottom: 8px; }
+            .grid { display: grid; gap: 20px; }
+            .grid-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(3, 1fr); }
+            .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+            .text-center { text-align: center; }
+            .mb-30 { margin-bottom: 30px; }
+            .mt-20 { margin-top: 20px; }
+            .mt-30 { margin-top: 30px; }
+            .btn { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+            .btn-primary { background: #6C63FF; color: white; }
+            .btn-success { background: #4CAF50; color: white; }
+            .btn-outline { background: transparent; border: 2px solid #6C63FF; color: #6C63FF; }
+            .navbar { background: #6C63FF; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+            .nav-links a { color: white; text-decoration: none; margin-left: 20px; }
+            .logo span { color: #FFD700; }
+            .table-container { overflow-x: auto; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+            th { background: #6C63FF; color: white; }
+        `;
+        document.head.appendChild(modalStyle);
+    </script>
+</body>
+</html>

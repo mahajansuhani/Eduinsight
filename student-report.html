@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Report - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="student-setup.html">Update Data</a>
+            <a href="student-report.html">View Report</a>
+            <a href="#" onclick="downloadReport(); return false;">Download Report</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>📄 Your Academic Report</h1>
+            <p>A printable summary of your academic profile and recommendations</p>
+        </div>
+
+        <div class="grid grid-4 mb-30">
+            <div class="card text-center">
+                <div style="font-size: 40px;">🎓</div>
+                <div class="stat-value" id="reportGPA">--</div>
+                <div>Current GPA</div>
+                <div class="progress-bar mt-10"><div class="progress-fill" id="gpaFill" style="width: 0%;"></div></div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 40px;">⚠️</div>
+                <div class="stat-value" id="reportRisk">--</div>
+                <div>Risk Level</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 40px;">📅</div>
+                <div class="stat-value" id="reportAttendance">--</div>
+                <div>Attendance</div>
+                <div class="progress-bar mt-10"><div class="progress-fill" id="attendanceFill" style="width: 0%; background: #4CAF50;"></div></div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 40px;">📚</div>
+                <div class="stat-value" id="reportStudyHours">--</div>
+                <div>Study Hours/Day</div>
+                <div class="progress-bar mt-10"><div class="progress-fill" id="studyFill" style="width: 0%; background: #FF9800;"></div></div>
+            </div>
+        </div>
+
+        <div class="grid grid-2 mb-30">
+            <div class="card">
+                <h3 class="card-title">📝 Assignment Score</h3>
+                <div class="stat-value" id="reportAssignment">--</div>
+                <div class="progress-bar mt-10"><div class="progress-fill" id="assignmentFill" style="width: 0%; background: #6C63FF;"></div></div>
+            </div>
+            <div class="card">
+                <h3 class="card-title">📊 Performance Overview</h3>
+                <p id="performanceText">Loading your performance data...</p>
+            </div>
+        </div>
+
+        <div class="grid grid-2 mb-30">
+            <div class="card">
+                <h3 class="card-title">🎯 Smart Recommendations</h3>
+                <div id="recommendationsList"></div>
+            </div>
+            <div class="card">
+                <h3 class="card-title">📋 Report Summary</h3>
+                <div class="subject-card">
+                    <div class="subject-name">Student Name</div>
+                    <p id="summaryName">-</p>
+                </div>
+                <div class="subject-card">
+                    <div class="subject-name">Email</div>
+                    <p id="summaryEmail">-</p>
+                </div>
+                <div class="subject-card">
+                    <div class="subject-name">Overall Status</div>
+                    <p id="summaryStatus">-</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-2 mt-30">
+            <button class="btn btn-primary" onclick="window.print()">🖨️ Print Report</button>
+            <button class="btn btn-success" onclick="downloadReport()">⬇ Download Report</button>
+        </div>
+    </div>
+
+    <script>
+        function safeGetItem(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch (error) {
+                console.warn(`Unable to read localStorage key: ${key}`, error);
+                return null;
+            }
+        }
+
+        function safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (error) {
+                console.warn(`Unable to write localStorage key: ${key}`, error);
+            }
+        }
+
+        function getCurrentUser() {
+            return {
+                id: parseInt(safeGetItem('userId') || '0', 10) || 0,
+                name: safeGetItem('userName') || 'Student',
+                email: safeGetItem('userEmail') || 'student@example.com',
+                role: safeGetItem('userRole') || 'student'
+            };
+        }
+
+        function logoutToHome() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = 'index.html';
+        }
+
+        function riskClassFromLevel(riskLevel) {
+            const level = (riskLevel || 'SAFE').toUpperCase();
+            if (level === 'CRITICAL' || level === 'HIGH RISK') return 'risk-high';
+            if (level === 'MEDIUM RISK' || level === 'ATTENTION NEEDED') return 'risk-medium';
+            return 'risk-low';
+        }
+
+        // Calculate GPA from raw data
+        function calculateGPA(attendance, studyHours, assignmentScore) {
+            const gpa = (attendance / 100) * 4 * 0.4 + (studyHours / 8) * 4 * 0.4 + (assignmentScore / 100) * 4 * 0.2;
+            return Math.min(Math.round(gpa * 100) / 100, 4.0);
+        }
+
+        // Determine risk level from GPA
+        function getRiskLevelFromGPA(gpa, attendance) {
+            if (gpa < 2.0) return "CRITICAL";
+            if (gpa < 2.5) return "HIGH RISK";
+            if (attendance < 60) return "ATTENTION NEEDED";
+            if (gpa < 3.0) return "MEDIUM RISK";
+            return "SAFE";
+        }
+
+        function getStoredStudentData() {
+            // Try to get data from multiple possible storage locations
+            let studentData = null;
+            
+            // Check for studentProfile (from student-setup.html)
+            const profileData = safeGetItem('studentProfile');
+            if (profileData) {
+                try {
+                    const profile = JSON.parse(profileData);
+                    studentData = {
+                        gpa: profile.gpa || calculateGPA(profile.attendance || 85, profile.studyHours || 4.5, profile.assignmentScore || 78),
+                        riskLevel: profile.riskLevel || getRiskLevelFromGPA(profile.gpa || 3.2, profile.attendance || 85),
+                        attendance: profile.attendance || 85,
+                        studyHours: profile.studyHours || 4.5,
+                        assignmentScore: profile.assignmentScore || 78,
+                        name: profile.name,
+                        email: profile.email
+                    };
+                } catch(e) {}
+            }
+            
+            // Check for studentGpaData (from dashboard updates)
+            const gpaData = safeGetItem('studentGpaData');
+            if (gpaData && !studentData) {
+                try {
+                    const data = JSON.parse(gpaData);
+                    studentData = {
+                        gpa: data.gpa || 3.2,
+                        riskLevel: data.riskLevel || 'LOW',
+                        attendance: data.attendance || 85,
+                        studyHours: data.studyHours || 4.5,
+                        assignmentScore: data.assignmentScore || 78
+                    };
+                } catch(e) {}
+            }
+            
+            // Default data if nothing found
+            if (!studentData) {
+                studentData = { ...defaults };
+            }
+
+            safeSetItem('studentGpaData', JSON.stringify({
+                gpa: Number(studentData.gpa) || defaults.gpa,
+                riskLevel: studentData.riskLevel || defaults.riskLevel,
+                attendance: Number(studentData.attendance) || defaults.attendance,
+                studyHours: Number(studentData.studyHours) || defaults.studyHours,
+                assignmentScore: Number(studentData.assignmentScore) || defaults.assignmentScore
+            }));
+            
+            return studentData;
+        }
+
+        function loadReport() {
+            try {
+                const currentUser = getCurrentUser();
+                const data = getStoredStudentData();
+
+                const gpa = Number(data.gpa).toFixed(2);
+                const riskLevel = data.riskLevel || 'LOW';
+                const attendance = Number(data.attendance);
+                const studyHours = Number(data.studyHours);
+                const assignmentScore = Number(data.assignmentScore);
+
+                const reportGPA = document.getElementById('reportGPA');
+                const gpaFill = document.getElementById('gpaFill');
+                const reportRisk = document.getElementById('reportRisk');
+                const reportAttendance = document.getElementById('reportAttendance');
+                const attendanceFill = document.getElementById('attendanceFill');
+                const reportStudyHours = document.getElementById('reportStudyHours');
+                const studyFill = document.getElementById('studyFill');
+                const reportAssignment = document.getElementById('reportAssignment');
+                const assignmentFill = document.getElementById('assignmentFill');
+
+                if (reportGPA) reportGPA.innerHTML = `${gpa} / 4.0`;
+                if (gpaFill) gpaFill.style.width = `${(Number(gpa) / 4) * 100}%`;
+
+                if (reportRisk) {
+                    reportRisk.innerHTML = riskLevel;
+                    reportRisk.className = `stat-value ${riskClassFromLevel(riskLevel)}`;
+                }
+
+                if (reportAttendance) reportAttendance.innerHTML = `${attendance}%`;
+                if (attendanceFill) attendanceFill.style.width = `${Math.min(attendance, 100)}%`;
+
+                if (reportStudyHours) reportStudyHours.innerHTML = `${studyHours} hrs`;
+                if (studyFill) studyFill.style.width = `${Math.min((studyHours / 8) * 100, 100)}%`;
+
+                if (reportAssignment) reportAssignment.innerHTML = `${assignmentScore}%`;
+                if (assignmentFill) assignmentFill.style.width = `${Math.min(assignmentScore, 100)}%`;
+
+                let recommendationText = '';
+                let statusMessage = '';
+
+                if (attendance < 75) recommendationText += '⚠️ Low attendance detected. Aim for 90%+. ';
+                if (studyHours < 5) recommendationText += '📚 Increase study hours to 6+ per day. ';
+                if (assignmentScore < 70) recommendationText += '📝 Complete assignments on time. ';
+                if (Number(gpa) < 2.5) recommendationText += '🎯 Consider seeking tutoring help. ';
+                if (recommendationText === '') {
+                    recommendationText = '✅ Excellent work! Keep maintaining your good habits.';
+                    statusMessage = 'Excellent Performance';
+                } else if (Number(gpa) < 2.0) {
+                    statusMessage = 'Critical - Needs Immediate Attention';
+                } else if (Number(gpa) < 2.5) {
+                    statusMessage = 'At Risk - Needs Improvement';
+                } else if (Number(gpa) < 3.0) {
+                    statusMessage = 'Average - Can Improve';
+                } else {
+                    statusMessage = 'Good Performance';
+                }
+
+                const performanceText = document.getElementById('performanceText');
+                if (performanceText) {
+                    performanceText.innerHTML = `
+                        <strong>GPA:</strong> ${gpa}/4.0 ${Number(gpa) >= 3.0 ? '✅' : '⚠️'}<br>
+                        <strong>Attendance:</strong> ${attendance}% ${attendance >= 75 ? '✅' : '⚠️'}<br>
+                        <strong>Study Hours:</strong> ${studyHours} hrs/day ${studyHours >= 5 ? '✅' : '⚠️'}<br>
+                        <strong>Assignments:</strong> ${assignmentScore}% ${assignmentScore >= 70 ? '✅' : '⚠️'}<br>
+                        <br><strong>Status:</strong> ${statusMessage}
+                    `;
+                }
+
+                const recommendationsList = document.getElementById('recommendationsList');
+                if (recommendationsList) {
+                    recommendationsList.innerHTML = `
+                        <div class="recommendation-item">
+                            <strong>📚 Study Plan</strong>
+                            <p>${studyHours >= 6 ? 'Great job! Maintain 6+ hours daily.' : 'Set a goal of 6 hours of focused study each day.'}</p>
+                        </div>
+                        <div class="recommendation-item">
+                            <strong>✅ Attendance Goal</strong>
+                            <p>${attendance >= 90 ? 'Excellent attendance! Keep it up.' : 'Target 90% attendance to maximize GPA.'}</p>
+                        </div>
+                        <div class="recommendation-item">
+                            <strong>📝 Assignment Strategy</strong>
+                            <p>${assignmentScore >= 85 ? 'Strong performance! Keep submitting quality work.' : 'Review feedback and submit assignments early.'}</p>
+                        </div>
+                        <div class="recommendation-item">
+                            <strong>🎯 Focus Area</strong>
+                            <p>${Number(gpa) < 3.0 ? 'Consider joining study groups for challenging subjects.' : 'You are on track! Aim for honors.'}</p>
+                        </div>
+                    `;
+                }
+
+                const displayName = data.name || currentUser.name;
+                const displayEmail = data.email || currentUser.email;
+                const summaryName = document.getElementById('summaryName');
+                const summaryEmail = document.getElementById('summaryEmail');
+                const summaryStatus = document.getElementById('summaryStatus');
+
+                if (summaryName) summaryName.innerHTML = displayName;
+                if (summaryEmail) summaryEmail.innerHTML = displayEmail;
+                if (summaryStatus) {
+                    summaryStatus.innerHTML = statusMessage;
+                    summaryStatus.className = riskClassFromLevel(riskLevel);
+                }
+            } catch (error) {
+                console.error('Failed to render report data:', error);
+                const performanceText = document.getElementById('performanceText');
+                if (performanceText) {
+                    performanceText.textContent = 'Could not load data. Please refresh the page.';
+                }
+            }
+        }
+        
+        function downloadReport() {
+            const currentUser = getCurrentUser();
+            const data = getStoredStudentData();
+            
+            const gpa = Number(data.gpa).toFixed(2);
+            const riskLevel = data.riskLevel || 'LOW';
+            const attendance = Number(data.attendance);
+            const studyHours = Number(data.studyHours);
+            const assignmentScore = Number(data.assignmentScore);
+            
+            const reportHtml = `<!DOCTYPE html>
+            <html>
+            <head>
+                <title>EduInsight_Report_${currentUser.name}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+                    h1 { color: #6C63FF; border-bottom: 2px solid #6C63FF; padding-bottom: 10px; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .section { margin-bottom: 25px; }
+                    .section-title { background: #6C63FF; color: white; padding: 10px; border-radius: 8px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    th { background: #f5f5f5; }
+                    .risk-high { color: #ef4444; font-weight: bold; }
+                    .risk-medium { color: #f59e0b; font-weight: bold; }
+                    .risk-low { color: #10b981; font-weight: bold; }
+                    .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
+                    .progress-bar { width: 100%; height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; }
+                    .progress-fill { height: 100%; background: #6C63FF; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🎓 EduInsight - Student Performance Report</h1>
+                    <p>Generated on: ${new Date().toLocaleString()}</p>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">📋 Student Information</h3>
+                    <table>
+                        <tr><th>Name</th><td>${data.name || currentUser.name}</td></tr>
+                        <tr><th>Email</th><td>${data.email || currentUser.email}</td></tr>
+                        <tr><th>GPA</th><td>${gpa} / 4.0</td></tr>
+                        <tr><th>Risk Level</th><td class="${riskLevel === 'HIGH RISK' || riskLevel === 'CRITICAL' ? 'risk-high' : riskLevel === 'MEDIUM RISK' ? 'risk-medium' : 'risk-low'}">${riskLevel}</td></tr>
+                    </table>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">📊 Academic Metrics</h3>
+                    <table>
+                        <tr><th>Metric</th><th>Value</th><th>Target</th><th>Progress</th></tr>
+                        <tr><td>Attendance</td><td>${attendance}%</td><td>90%</td><td><div class="progress-bar"><div class="progress-fill" style="width: ${Math.min(attendance, 100)}%;"></div></div></td></tr>
+                        <tr><td>Study Hours</td><td>${studyHours} hrs/day</td><td>6 hrs</td><td><div class="progress-bar"><div class="progress-fill" style="width: ${Math.min((studyHours / 8) * 100, 100)}%;"></div></div></td></tr>
+                        <tr><td>Assignment Score</td><td>${assignmentScore}%</td><td>85%</td><td><div class="progress-bar"><div class="progress-fill" style="width: ${Math.min(assignmentScore, 100)}%;"></div></div></td></tr>
+                    </table>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">🎯 Recommendations</h3>
+                    <ul>
+                        <li>${studyHours >= 6 ? '✅ Keep maintaining your study habits!' : '📚 Increase study hours to 6+ per day'}</li>
+                        <li>${attendance >= 90 ? '✅ Excellent attendance record!' : '✅ Aim for 90% attendance to boost GPA'}</li>
+                        <li>${assignmentScore >= 85 ? '✅ Great work on assignments!' : '📝 Complete pending assignments on time'}</li>
+                        <li>🎯 Focus on weak subjects and practice regularly</li>
+                    </ul>
+                </div>
+                
+                <div class="footer">
+                    <p>EduInsight - Smart Student Performance Analyzer</p>
+                </div>
+            </body>
+            </html>`;
+            
+            const blob = new Blob([reportHtml], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `EduInsight_Report_${currentUser.name}_${new Date().toISOString().split('T')[0]}.html`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            alert('✅ Report downloaded successfully!');
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadReport);
+        } else {
+            loadReport();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Results Management - EduInsight</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🎓 Edu<span>Insight</span></div>
+        <div class="nav-links">
+            <a href="teacher-dashboard.html">Dashboard</a>
+            <a href="student-management.html">Manage Students</a>
+            <a href="csv-import.html">Import CSV</a>
+            <a href="attendance.html">Attendance</a>
+            <a href="exam-results.html">Exam Results</a>
+            <a href="#" onclick="logoutToHome(); return false;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="teacher-page-tabs" aria-label="Teacher pages">
+            <a class="teacher-page-tab" href="teacher-dashboard.html">Overview</a>
+            <a class="teacher-page-tab" href="student-management.html">Students</a>
+            <a class="teacher-page-tab" href="attendance.html">Attendance</a>
+            <a class="teacher-page-tab active" href="exam-results.html">Exam Results</a>
+            <a class="teacher-page-tab" href="csv-import.html">CSV Import</a>
+        </div>
+
+        <h2>📝 Exam Results Management</h2>
+        <p>Enter and manage student exam results</p>
+        
+        <div class="card" style="margin-bottom: 20px; padding: 20px;">
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div>
+                    <label for="examSelect">Select Exam:</label>
+                    <select id="examSelect" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;">
+                        <option>Mid-Term Exams</option>
+                        <option>Final Exams</option>
+                        <option>Weekly Test</option>
+                        <option>Quiz</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="examStreamFilter">Select Stream:</label>
+                    <select id="examStreamFilter" class="form-control" style="width: auto; display: inline-block; margin-left: 10px;">
+                        <option value="all">All Streams</option>
+                        <option value="Science">Science</option>
+                        <option value="Commerce">Commerce</option>
+                        <option value="Arts">Arts</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadExamResults()">Load Results</button>
+                <button class="btn btn-success" onclick="saveExamResults()">Save All</button>
+                <button class="btn btn-warning" onclick="publishResults()">📢 Publish Results</button>
+                <button class="btn btn-outline" onclick="openSubjectModal()">➕ Add Subject</button>
+            </div>
+        </div>
+        
+        <div class="grid grid-4" id="resultsSummary" style="display: none; margin-bottom: 20px;">
+            <div class="card text-center">
+                <div style="font-size: 32px;">📊</div>
+                <div class="stat-value" id="examTotalStudents">0</div>
+                <div class="stat-label">Total Students</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 32px;">📈</div>
+                <div class="stat-value" id="classAverage">0%</div>
+                <div class="stat-label">Class Average</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 32px;">✅</div>
+                <div class="stat-value" id="passPercentage">0%</div>
+                <div class="stat-label">Pass Percentage</div>
+            </div>
+            <div class="card text-center">
+                <div style="font-size: 32px;">🏆</div>
+                <div class="stat-value" id="topScorer" style="font-size: 16px;">-</div>
+                <div class="stat-label">Top Scorer</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 class="card-title">📊 Enter Marks</h3>
+            <div class="table-container">
+                <table id="examResultsTable">
+                    <thead>
+                        <tr><th>ID</th><th>Student Name</th><th>Stream</th><th>Subject</th><th>Marks</th><th>Total</th><th>Percentage</th><th>Grade</th></tr>
+                    </thead>
+                    <tbody id="examResultsBody">
+                        <tr><td colspan="8" style="text-align: center;">Select exam and click "Load Results"</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h3 class="card-title">📤 Bulk Update Results</h3>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" onclick="downloadResultsTemplate()">Download Template</button>
+                <input type="file" id="resultsCSV" accept=".csv" style="display: none;">
+                <button class="btn btn-primary" onclick="document.getElementById('resultsCSV').click()">Upload CSV</button>
+                <button class="btn btn-success" onclick="bulkUpdateResults()">Apply Bulk Update</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="subjectModal" class="modal">
+        <div class="modal-content">
+            <h3>➕ Add New Subject</h3>
+            <div class="form-group">
+                <label>Subject Name</label>
+                <input type="text" id="newSubject" class="form-control" placeholder="e.g., Physics">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-primary" onclick="addSubject()">Add</button>
+                <button class="btn btn-outline" onclick="closeSubjectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app-core.js"></script>
+    <script>
+        requireLogin('teacher');
+        
+        let students = [];
+        let examResults = {};
+        const defaultSubjects = ['Mathematics', 'Physics', 'Chemistry', 'English', 'Computer Science'];
+        let subjects = loadSubjects();
+
+        function loadSubjects() {
+            try {
+                const storedSubjects = localStorage.getItem('examSubjects');
+                const parsedSubjects = storedSubjects ? JSON.parse(storedSubjects) : null;
+                return Array.isArray(parsedSubjects) && parsedSubjects.length > 0 ? parsedSubjects : [...defaultSubjects];
+            } catch (error) {
+                return [...defaultSubjects];
+            }
+        }
+
+        function saveSubjects() {
+            localStorage.setItem('examSubjects', JSON.stringify(subjects));
+        }
+
+        function populateExamSubjectOptions() {
+            const examSelect = document.getElementById('examSelect');
+            if (!examSelect) {
+                return;
+            }
+
+            const existingOptions = Array.from(examSelect.options).map((option) => option.value);
+            subjects.forEach((subject) => {
+                if (!existingOptions.includes(subject)) {
+                    const option = document.createElement('option');
+                    option.value = subject;
+                    option.textContent = subject;
+                    examSelect.appendChild(option);
+                }
+            });
+        }
+
+        function renderExamResultsTable() {
+            const exam = document.getElementById('examSelect').value;
+            const stream = document.getElementById('examStreamFilter').value;
+
+            let filteredStudents = students;
+            if (stream !== 'all') {
+                filteredStudents = students.filter((student) => student.stream === stream);
+            }
+
+            let totalPercentage = 0;
+            let passCount = 0;
+            let topScore = 0;
+            let topStudent = '';
+
+            filteredStudents.forEach((student) => {
+                let studentTotal = 0;
+                let studentCount = 0;
+
+                subjects.forEach((subject) => {
+                    const marks = examResults[exam]?.[student.id]?.[subject]?.marks || 0;
+                    studentTotal += marks;
+                    studentCount++;
+                });
+
+                const avgPercentage = studentCount > 0 ? (studentTotal / studentCount) : 0;
+                totalPercentage += avgPercentage;
+                if (avgPercentage >= 40) passCount++;
+                if (avgPercentage > topScore) {
+                    topScore = avgPercentage;
+                    topStudent = student.name;
+                }
+            });
+
+            const classAvg = filteredStudents.length > 0 ? (totalPercentage / filteredStudents.length).toFixed(1) : 0;
+            const passPercent = filteredStudents.length > 0 ? ((passCount / filteredStudents.length) * 100).toFixed(1) : 0;
+
+            document.getElementById('examTotalStudents').textContent = filteredStudents.length;
+            document.getElementById('classAverage').textContent = classAvg + '%';
+            document.getElementById('passPercentage').textContent = passPercent + '%';
+            document.getElementById('topScorer').textContent = topStudent ? `${topStudent} (${topScore.toFixed(1)}%)` : '-';
+            document.getElementById('resultsSummary').style.display = 'grid';
+
+            const tbody = document.getElementById('examResultsBody');
+            tbody.innerHTML = '';
+
+            filteredStudents.forEach((student) => {
+                subjects.forEach((subject) => {
+                    const result = examResults[exam]?.[student.id]?.[subject] || { marks: 0, total: 100 };
+                    const percentage = result.total > 0 ? (result.marks / result.total) * 100 : 0;
+                    const grade = getGrade(percentage);
+                    const gradeClass = getGradeClass(grade);
+
+                    const row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td>${student.id}</td>
+                        <td>${student.name}</td>
+                        <td>${student.stream}</td>
+                        <td>${subject}</td>
+                        <td><input type="number" class="form-control" id="marks-${exam}-${student.id}-${subject}" value="${result.marks}" onchange="updateMarks('${exam}', ${student.id}, '${subject}')" style="width: 80px;"></td>
+                        <td>${result.total}</td>
+                        <td id="percent-${exam}-${student.id}-${subject}">${percentage.toFixed(1)}%</td>
+                        <td class="${gradeClass}">${grade}</td>
+                    `;
+                });
+            });
+        }
+        
+        function getGrade(percentage) {
+            if (percentage >= 90) return 'A+';
+            if (percentage >= 80) return 'A';
+            if (percentage >= 70) return 'B+';
+            if (percentage >= 60) return 'B';
+            if (percentage >= 50) return 'C';
+            if (percentage >= 40) return 'D';
+            return 'F';
+        }
+        
+        function getGradeClass(grade) {
+            if (grade === 'A+' || grade === 'A') return 'grade-A';
+            if (grade === 'B+' || grade === 'B') return 'grade-B';
+            if (grade === 'C') return 'grade-C';
+            if (grade === 'D') return 'grade-D';
+            return 'grade-F';
+        }
+        
+        function updateMarks(exam, studentId, subject) {
+            const marksInput = document.getElementById(`marks-${exam}-${studentId}-${subject}`);
+            const marks = parseInt(marksInput.value);
+            
+            if (examResults[exam] && examResults[exam][studentId] && examResults[exam][studentId][subject]) {
+                examResults[exam][studentId][subject].marks = marks;
+                const percentage = (marks / examResults[exam][studentId][subject].total) * 100;
+                document.getElementById(`percent-${exam}-${studentId}-${subject}`).textContent = percentage.toFixed(1) + '%';
+            }
+        }
+        
+        async function loadExamResults() {
+            const exam = document.getElementById('examSelect').value;
+
+            try {
+                const data = await apiGet('/students');
+                students = data.students || [];
+                localStorage.setItem('studentsCache', JSON.stringify(students));
+                
+                try {
+                    const resultsResponse = await fetch(`http://localhost:8080/api/exam-results?examName=${encodeURIComponent(exam)}`);
+                    const resultsData = await resultsResponse.json();
+                    
+                    if (resultsData.success && resultsData.results) {
+                        if (!examResults[exam]) examResults[exam] = {};
+                        resultsData.results.forEach(record => {
+                            const studentId = record.student_id;
+                            const subjectName = record.subject;
+                            if (!examResults[exam][studentId]) examResults[exam][studentId] = {};
+                            examResults[exam][studentId][subjectName] = {
+                                marks: record.marks_obtained,
+                                total: record.total_marks
+                            };
+                        });
+                    }
+                } catch (error) {
+                    console.log('No existing results for this exam');
+                }
+
+                if (!examResults[exam]) {
+                    examResults[exam] = {};
+                }
+
+                students.forEach((student) => {
+                    if (!examResults[exam][student.id]) {
+                        examResults[exam][student.id] = {};
+                    }
+
+                    subjects.forEach((subject) => {
+                        if (!examResults[exam][student.id][subject]) {
+                            examResults[exam][student.id][subject] = { marks: 0, total: 100 };
+                        }
+                    });
+                });
+
+                saveSubjects();
+                populateExamSubjectOptions();
+                renderExamResultsTable();
+            } catch (error) {
+                if (students.length === 0) {
+                    try {
+                        const cachedStudents = JSON.parse(localStorage.getItem('studentsCache') || '[]');
+                        if (Array.isArray(cachedStudents) && cachedStudents.length > 0) {
+                            students = cachedStudents;
+                            renderExamResultsTable();
+                            return;
+                        }
+                    } catch (cacheError) {
+                        // Ignore cache parse issues and fall through to the alert below.
+                    }
+
+                    alert('Failed to load data. Make sure backend is running.');
+                    return;
+                }
+                renderExamResultsTable();
+            }
+        }
+        
+        async function saveExamResults() {
+            const exam = document.getElementById('examSelect').value;
+            const examDate = new Date().toISOString().split('T')[0];
+            let savedCount = 0;
+            let failCount = 0;
+            
+            for (const student of students) {
+                for (const subject of subjects) {
+                    const result = examResults[exam]?.[student.id]?.[subject];
+                    if (result && result.marks > 0) {
+                        try {
+                            const response = await fetch('http://localhost:8080/api/exam-results', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: new URLSearchParams({
+                                    studentId: student.id,
+                                    examName: exam,
+                                    subject: subject,
+                                    marksObtained: result.marks,
+                                    totalMarks: result.total || 100,
+                                    examDate: examDate
+                                }).toString()
+                            });
+                            
+                            const data = await response.json();
+                            if (data.success) savedCount++;
+                            else failCount++;
+                        } catch (error) {
+                            failCount++;
+                        }
+                    }
+                }
+            }
+            
+            localStorage.setItem('examResultsStore', JSON.stringify(examResults));
+            alert(`Results for ${exam} saved!\n✅ Success: ${savedCount}\n❌ Failed: ${failCount}`);
+        }
+        
+        function publishResults() {
+            const exam = document.getElementById('examSelect').value;
+            if (confirm(`Are you sure you want to publish ${exam} results?`)) {
+                alert(`✅ ${exam} results published successfully!`);
+            }
+        }
+        
+        function downloadResultsTemplate() {
+            let template = "Student ID,Student Name";
+            subjects.forEach(s => template += `,${s}`);
+            template += "\n";
+            students.forEach(s => {
+                template += `${s.id},${s.name}`;
+                subjects.forEach(() => template += `,`);
+                template += "\n";
+            });
+            
+            const blob = new Blob([template], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'exam_results_template.csv';
+            link.click();
+        }
+        
+        function bulkUpdateResults() {
+            const fileInput = document.getElementById('resultsCSV');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n');
+                const exam = document.getElementById('examSelect').value;
+                
+                if (!examResults[exam]) examResults[exam] = {};
+                
+                const headers = lines[0].split(',');
+                const subjectColumns = headers.slice(2);
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const parts = lines[i].split(',');
+                    if (parts.length >= 2) {
+                        const studentId = parseInt(parts[0]);
+                        if (!examResults[exam][studentId]) examResults[exam][studentId] = {};
+                        
+                        for (let j = 0; j < subjectColumns.length; j++) {
+                            const subject = subjectColumns[j].trim();
+                            const marks = parseInt(parts[j + 2]);
+                            if (subject && !isNaN(marks)) {
+                                examResults[exam][studentId][subject] = { marks: marks, total: 100 };
+                            }
+                        }
+                    }
+                }
+                loadExamResults();
+                alert('Results updated successfully!');
+            };
+            reader.readAsText(file);
+        }
+        
+        function openSubjectModal() {
+            document.getElementById('subjectModal').classList.add('active');
+        }
+        
+        function closeSubjectModal() {
+            document.getElementById('subjectModal').classList.remove('active');
+        }
+        
+        function addSubject() {
+            const newSubject = document.getElementById('newSubject').value.trim();
+            if (newSubject) {
+                if (!subjects.includes(newSubject)) {
+                    subjects.push(newSubject);
+                    saveSubjects();
+                    populateExamSubjectOptions();
+                }
+                closeSubjectModal();
+                if (students.length > 0) {
+                    renderExamResultsTable();
+                }
+                alert(`Subject "${newSubject}" added!`);
+                document.getElementById('newSubject').value = '';
+            }
+        }
+        
+        function logoutToHome() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            window.location.href = 'index.html';
+        }
+        
+        const savedExamResults = localStorage.getItem('examResultsStore');
+        if (savedExamResults) {
+            examResults = JSON.parse(savedExamResults);
+        }
+
+        populateExamSubjectOptions();
+    </script>
+</body>
+</html>
